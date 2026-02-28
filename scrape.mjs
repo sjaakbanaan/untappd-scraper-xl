@@ -6,10 +6,13 @@ import {
   FIRST_BATCH_SIZE,
   BATCH_SIZE,
   BEER_BATCH_SIZE,
+  OUTPUT_FILE,
   sleep,
 } from "./lib/config.mjs";
+import { readFileSync } from "fs";
 
 const INCLUDE_FLAVORS = process.argv.includes("--include-flavors");
+const UPDATE_ALL = process.argv.includes("--update-all");
 
 import {
   parseCheckins,
@@ -18,6 +21,7 @@ import {
   parseBreweryDetails,
   parseBreweryVenueUrl,
   parseCheckinFlavors,
+  parseCheckinStats,
 } from "./lib/parsers.mjs";
 import { saveProgress, saveOutput } from "./lib/storage.mjs";
 import {
@@ -328,9 +332,84 @@ async function phase1() {
   }
 }
 
+// ── Phase Update-All ─────────────────────────────────────────────────────────
+
+async function phaseUpdateAll() {
+  // Load existing output file
+  let existing;
+  try {
+    existing = JSON.parse(readFileSync(OUTPUT_FILE, "utf-8"));
+  } catch {
+    console.error(`❌  Could not read ${OUTPUT_FILE}. Run a full scrape first.`);
+    process.exit(1);
+  }
+
+  // Work on a mutable copy of the checkins array (objects are refs so patches apply in place)
+  const allCheckins = existing.checkins;
+  console.log(`📂  Loaded ${allCheckins.length} checkins from ${OUTPUT_FILE}\n`);
+
+  // ── Sub-phase A: Beer stats ──────────────────────────────────────────────
+  const beerUrls = [...new Set(allCheckins.map((c) => c.beer?.url).filter(Boolean))];
+  console.log(`🍺  Update-All A: Re-fetching ${beerUrls.length} beer(s) [${CONCURRENCY} workers]…`);
+
+  try {
+    const { done, errorCount } = await pool(
+      beerUrls,
+      "Beer",
+      beerUrls.length,
+      0,
+      CONCURRENCY,
+      async (url) => {
+        const html = await fetchPage(url);
+        writeBeer(url, parseBeerDetails(html));
+      }
+    );
+    process.stdout.write("\n");
+    console.log(`   ✅ ${done} beers updated, ${errorCount} errors`);
+  } catch (err) {
+    process.stdout.write("\n");
+    throw err;
+  }
+
+  // Intermediate save so beer stats are in the output even if checkin phase is interrupted
+  saveOutput(allCheckins);
+
+  // ── Sub-phase B: Checkin activity (toasts + comments) ────────────────────
+  console.log(`\n💬  Update-All B: Re-fetching ${allCheckins.length} checkin(s) for toasts & comments [${CONCURRENCY} workers]…`);
+
+  try {
+    const { done, errorCount } = await pool(
+      allCheckins,
+      "Checkin",
+      allCheckins.length,
+      0,
+      CONCURRENCY,
+      async (c) => {
+        const html = await fetchPage(c.checkin_url);
+        const stats = parseCheckinStats(html);
+        c.toasts = stats.toasts;
+        c.comment_count = stats.comment_count;
+      }
+    );
+    process.stdout.write("\n");
+    console.log(`   ✅ ${done} checkins updated, ${errorCount} errors`);
+  } catch (err) {
+    process.stdout.write("\n");
+    throw err;
+  } finally {
+    saveOutput(allCheckins);
+  }
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
+  if (UPDATE_ALL) {
+    console.log(`🔄 Untappd Scraper XL — user: "${USER}" [--update-all, concurrency: ${CONCURRENCY}]\n`);
+    await phaseUpdateAll();
+    return;
+  }
+
   const flags = INCLUDE_FLAVORS ? " +flavors" : "";
   console.log(`🍺 Untappd Scraper XL — user: "${USER}" [concurrency: ${CONCURRENCY}${flags}]\n`);
   if (!INCLUDE_FLAVORS) {
