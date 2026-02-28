@@ -34,7 +34,9 @@ Edit `.env` and fill in your Untappd credentials:
 npm run scrape:full
 ```
 
-This paginates your **entire** Untappd feed from newest to oldest, fetches beer/venue/brewery details, and writes `output/<username>_checkins.json`. Depending on your history this can take a while (approx. 25 minutes for 1000 checkins). It only needs to be done once.
+This paginates your **entire** Untappd feed from newest to oldest, fetches beer/venue/brewery details, and writes `output/<username>_checkins.json`. Depending on your history this can take a while (approx. 25 minutes for 1000 checkins). This only needs to be done once.
+
+You can stop the script at any time by pressing `Ctrl+C`. The script will save the progress it has made so far and you can continue where you left off by running `npm run scrape:full` again.
 
 ### Keeping up to date
 
@@ -85,63 +87,63 @@ Loads the existing output file and re-scrapes only the fields that change over t
 
 ### `output/<username>_checkins.json`
 
-The main output file — fully enriched, sorted newest-first (values left blank for privacy reasons):
+The main output file — fully enriched, sorted newest-first (some values left blank for privacy reasons):
 
 ```json
 {
   "meta": {
     "user": "...",
-    "total_checkins": ...,
+    "total_checkins": 1337,
     "scraped_at": "2026-02-28T19:00:00.000Z",
     "oldest_checkin": "2013-07-12T18:00:00.000Z",
     "newest_checkin": "2026-02-27T16:19:10.000Z"
   },
   "checkins": [
     {
-      "checkin_id": ...,
+      "checkin_id": "...",
       "checkin_url": "https://untappd.com/user/.../checkin/...",
       "created_at": "2026-02-27T16:19:10.000Z",
       "beer": {
-        "name": "...",
-        "url": "https://untappd.com/b/.../...",
-        "label_url": "https://assets.untappd.com/...",
-        "beer_url": "https://untappd.com/b/.../...",
+        "name": "Barbarian Fishing Superdelic Columbus",
+        "url": "https://untappd.com/b/de-kromme-haring-…/6599834",
+        "label_url": "https://assets.untappd.com/…",
+        "beer_url": "https://untappd.com/b/de-kromme-haring-…/6599834",
         "global_rating": 3.84,
         "global_rating_count": 56,
         "abv": 8,
         "ibu": null,
-        "style": "... - ...",
+        "style": "IPA - Imperial / Double New England / Hazy",
         "description": "…",
         "total_checkins": 61,
         "unique_users": 61,
         "monthly_checkins": 61
       },
       "brewery": {
-        "name": "...",
-        "url": "https://untappd.com/...",
-        "brewery_url": "https://untappd.com/...",
-        "address": "...",
-        "lat": ...,
-        "lng": ...
+        "name": "De Kromme Haring",
+        "url": "https://untappd.com/DeKrommeHaring",
+        "brewery_url": "https://untappd.com/DeKrommeHaring",
+        "address": "Utrecht, Netherlands",
+        "lat": 52.0197639,
+        "lng": 4.4322071
       },
       "venue": {
         "name": "...",
         "url": "https://untappd.com/v/.../...",
         "venue_url": "https://untappd.com/v/.../...",
         "address": "...",
-        "lat": ...,
-        "lng": ...
+        "lat": 0,
+        "lng": 0
       },
-      "purchased_at": { "…": "..." },
+      "purchased_at": { "…": "same shape as venue" },
       "rating": 3.9,
       "serving_type": "Can",
-      "comment": "...",
+      "comment": null,
       "photo_url": "https://images.untp.beer/…",
-      "toasts": { "count": 3, "users": ["..."] },
+      "toasts": { "count": 1, "users": ["cbeijer"] },
       "comment_count": 0,
-      "tagged_friends": ["..."],
+      "tagged_friends": ["Teuntjetripel"],
       "badges": [],
-      "flavor": ["Hoppy", "Citrus", "Bitter"]
+      "flavor": ["Hoppy", "Grapefruity", "Grapefruit Peel"]
     }
   ]
 }
@@ -158,7 +160,7 @@ Each entity is stored as a separate JSON file, keyed by its Untappd ID or slug:
 | `db/breweries/<slug>.json` | URL-derived slug | `brewery_url`, address, lat/lng (resolved via embedded venue page) |
 | `db/checkins/<id>.json` | numeric checkin ID | `flavor` array (only written with `--include-flavors`) |
 
-Storing the permalink in each file means live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) can be refreshed in the future without re-scraping the entire feed.
+Storing the permalink in each file means live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) can be refreshed with `npm run scrape:stats`.
 
 ## Notes
 
