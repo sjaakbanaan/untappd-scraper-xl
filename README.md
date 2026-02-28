@@ -28,39 +28,49 @@ Edit `.env` and fill in your Untappd credentials:
 
 ## Usage
 
-```bash
-npm run scrape
-```
+There are three modes, each with its own npm script:
 
-Every run scrapes the **complete** feed from scratch (newest → oldest) and writes `output/<username>_checkins.json`. Previously cached entity data (beers, venues, breweries) is reused automatically, so only truly new entities need to be fetched — making subsequent runs much faster.
+| Script | Flag | What it does |
+|---|---|---|
+| `npm run scrape` | *(default)* | **Incremental** — fetch only new checkins, stop at first known one, merge into existing output |
+| `npm run scrape:full` | `--full` | **Full scrape** — paginate the entire feed newest → oldest |
+| `npm run scrape:stats` | `--stats` | **Stats refresh** — re-scrape live beer stats, toasts & comments for every existing checkin |
 
 ```bash
+# Keep your export up to date (run daily / after a session)
 npm run scrape
-# or, to also scrape individual checkin pages for flavor profiles:
+
+# Initial or full re-scrape
+npm run scrape:full
+
+# Refresh ratings, toast counts, and comment counts
+npm run scrape:stats
+
+# Any mode also supports --include-flavors to scrape per-checkin flavor profiles
 npm run scrape -- --include-flavors
 ```
 
-### Refresh live stats for all existing checkins
+### Incremental mode (default)
 
-```bash
-npm run update-all
-# or: node scrape.mjs --update-all
-```
+Loads the existing `output/<username>_checkins.json`, scrapes the feed from the top, and stops the moment it hits a checkin ID that's already in the file. New checkins are merged with the existing list before saving. On the very first run (no output file yet) it falls back to a full scrape automatically.
 
-Loads the existing `output/<username>_checkins.json` and re-scrapes only the fields that change over time, without touching the rest of your data:
+### Full scrape (`--full`)
+
+Paginates the entire feed in batches, running phases 2 and 3 (and optionally 4) after every flush:
+
+1. **Phase 1 — Checkin feed**: Paginates until the feed is exhausted.
+2. **Phase 2 — Beer details**: Fetches each unique beer page not yet in `output/db/beers/`.
+3. **Phase 3 — Venue & brewery details**: Fetches venue/brewery pages not yet cached in `output/db/locations/` and `output/db/breweries/`.
+4. **Phase 4 — Flavor profiles** *(opt-in, `--include-flavors`)*: Fetches individual checkin pages for flavor tags; cached in `output/db/checkins/`.
+
+### Stats refresh (`--stats`)
+
+Loads the existing output file and re-scrapes only the fields that change over time, without touching the rest of your data:
 
 | Sub-phase | Pages fetched | Fields refreshed |
 |---|---|---|
 | **A — Beer stats** | Beer pages (unique per beer) | `global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins` |
 | **B — Checkin activity** | Individual checkin pages (one per checkin) | `toasts` (count + users), `comment_count` |
-
-### What happens during a run
-
-1. **Phase 1 — Checkin feed**: Paginates through your full Untappd profile, collecting every checkin until the feed is exhausted.
-2. **Phase 2 — Beer details**: Fetches the beer page for each unique beer not yet in the local cache (`output/db/beers/`).
-3. **Phase 3 — Venue & brewery details**: Fetches venue and brewery pages for any not yet cached (`output/db/locations/`, `output/db/breweries/`). For breweries that don't expose coordinates directly, the scraper follows the embedded `/v/` venue link to get lat/lng.
-4. **Phase 4 — Flavor profiles** *(opt-in, `--include-flavors`)*: Fetches each individual checkin page to extract the user's flavor tags (e.g. `["Hoppy", "Grapefruity"]`). Results are cached in `output/db/checkins/` so only new checkins are re-fetched on subsequent runs.
-5. **Update-All** *(opt-in, `--update-all`)*: Skips phases 1–4 entirely. Loads the existing output file and re-fetches only the live-changing fields (beer stats + checkin toasts/comments). Use this to keep your export fresh without re-scraping the full feed.
 
 ## Output
 
@@ -147,4 +157,4 @@ Storing the permalink in each file means live stats (`global_rating`, `global_ra
 - **Rate limiting**: 1 s delay per worker between requests
 - **Cookie expiry**: if you see a "Session expired" error, grab a fresh cookie from your browser
 - **Flavor profiles**: opt-in via `--include-flavors`; results are cached in `output/db/checkins/` so only new checkins need fetching on subsequent runs
-- **Update-All**: opt-in via `--update-all`; re-scrapes beer stats and checkin activity (toasts, comments) for every entry in the existing output file without touching the rest of your data
+- **scrape:stats**: opt-in via `--stats`; re-scrapes beer stats and checkin activity (toasts, comments) for every entry in the existing output file without touching the rest of your data

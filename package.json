@@ -6,7 +6,8 @@
   "main": "scrape.mjs",
   "scripts": {
     "scrape": "node scrape.mjs",
-    "update-all": "node scrape.mjs --update-all"
+    "scrape:full": "node scrape.mjs --full",
+    "scrape:stats": "node scrape.mjs --stats"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
