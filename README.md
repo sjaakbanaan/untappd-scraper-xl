@@ -28,7 +28,23 @@ Edit `.env` and fill in your Untappd credentials:
 
 ## Usage
 
-There are three modes, each with its own npm script:
+### First time
+
+```bash
+npm run scrape:full
+```
+
+This paginates your **entire** Untappd feed from newest to oldest, fetches beer/venue/brewery details, and writes `output/<username>_checkins.json`. Depending on your history this can take a while — it only needs to be done once.
+
+### Keeping up to date
+
+```bash
+npm run scrape
+```
+
+Scrapes the feed from the top and **stops as soon as it hits a checkin already in your output file**. New checkins are merged in automatically. Run this after every drinking session.
+
+### All commands
 
 | Script | Flag | What it does |
 |---|---|---|
@@ -37,33 +53,25 @@ There are three modes, each with its own npm script:
 | `npm run scrape:stats` | `--stats` | **Stats refresh** — re-scrape live beer stats, toasts & comments for every existing checkin |
 
 ```bash
-# Keep your export up to date (run daily / after a session)
-npm run scrape
-
-# Initial or full re-scrape
-npm run scrape:full
-
-# Refresh ratings, toast counts, and comment counts
-npm run scrape:stats
-
-# Any mode also supports --include-flavors to scrape per-checkin flavor profiles
+# Optional: also scrape per-checkin flavor profiles (scrape and scrape:full only)
 npm run scrape -- --include-flavors
+npm run scrape:full -- --include-flavors
 ```
 
-### Incremental mode (default)
+### Incremental mode (`npm run scrape`)
 
-Loads the existing `output/<username>_checkins.json`, scrapes the feed from the top, and stops the moment it hits a checkin ID that's already in the file. New checkins are merged with the existing list before saving. On the very first run (no output file yet) it falls back to a full scrape automatically.
+Loads the existing output file, scrapes from the top, and stops the moment it hits a known checkin ID. On the very first run (no output file yet) it silently falls back to a full scrape.
 
-### Full scrape (`--full`)
+### Full scrape (`npm run scrape:full`)
 
-Paginates the entire feed in batches, running phases 2 and 3 (and optionally 4) after every flush:
+Paginates the entire feed in batches, running phases 2–3 (and optionally 4) after every flush:
 
 1. **Phase 1 — Checkin feed**: Paginates until the feed is exhausted.
 2. **Phase 2 — Beer details**: Fetches each unique beer page not yet in `output/db/beers/`.
 3. **Phase 3 — Venue & brewery details**: Fetches venue/brewery pages not yet cached in `output/db/locations/` and `output/db/breweries/`.
 4. **Phase 4 — Flavor profiles** *(opt-in, `--include-flavors`)*: Fetches individual checkin pages for flavor tags; cached in `output/db/checkins/`.
 
-### Stats refresh (`--stats`)
+### Stats refresh (`npm run scrape:stats`)
 
 Loads the existing output file and re-scrapes only the fields that change over time, without touching the rest of your data:
 
@@ -71,6 +79,7 @@ Loads the existing output file and re-scrapes only the fields that change over t
 |---|---|---|
 | **A — Beer stats** | Beer pages (unique per beer) | `global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins` |
 | **B — Checkin activity** | Individual checkin pages (one per checkin) | `toasts` (count + users), `comment_count` |
+
 
 ## Output
 
