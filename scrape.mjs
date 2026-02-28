@@ -2,11 +2,15 @@ import {
   USER,
   HEADERS,
   DELAY_MS,
+  CONCURRENCY,
   FIRST_BATCH_SIZE,
   BATCH_SIZE,
   BEER_BATCH_SIZE,
   sleep,
 } from "./lib/config.mjs";
+
+const INCLUDE_FLAVORS = process.argv.includes("--include-flavors");
+
 import {
   parseCheckins,
   parseBeerDetails,
@@ -37,6 +41,46 @@ async function fetchPage(url) {
   return res.text();
 }
 
+/**
+ * Run `fn(item)` for every item in `items` using at most `concurrency` parallel
+ * workers. Each worker awaits a DELAY_MS sleep after every successful or failed
+ * request so we stay polite while still getting N× throughput.
+ *
+ * If fn throws with "Session expired", all workers abort immediately.
+ */
+async function pool(items, label, total, startCount, concurrency, fn) {
+  let idx = 0;
+  let done = 0;
+  let errorCount = 0;
+  let sessionExpired = false;
+
+  const counter = () => startCount + done;
+
+  async function worker() {
+    while (idx < items.length && !sessionExpired) {
+      const item = items[idx++]; // grab next item atomically (JS is single-threaded)
+      try {
+        await fn(item);
+      } catch (err) {
+        if (err.message.includes("Session expired")) {
+          sessionExpired = true;
+          throw err;
+        }
+        if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed: ${err.message}`);
+      }
+      done++;
+      process.stdout.write(`\r   ${label} ${counter()}/${total}…   `);
+      await sleep(DELAY_MS);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  await Promise.all(workers);
+
+  if (sessionExpired) throw new Error("🔒 Session expired – Untappd redirected to login. Grab a fresh cookie.");
+  return { done, errorCount };
+}
+
 // ── Phase 2: Beer details ───────────────────────────────────────────────────
 
 async function phase2(allCheckins) {
@@ -49,120 +93,108 @@ async function phase2(allCheckins) {
     return;
   }
 
-  console.log(`\n🍺  Phase 2: Fetching ${beerUrls.length} new beer(s)…`);
-
-  let count = 0;
-  let errorCount = 0;
+  console.log(`\n🍺  Phase 2: Fetching ${beerUrls.length} new beer(s) [${CONCURRENCY} workers]…`);
+  let saved = 0;
 
   try {
-    for (const url of beerUrls) {
-      process.stdout.write(`\r   Beer ${++count}/${beerUrls.length}…   `);
-      try {
+    const { done, errorCount } = await pool(
+      beerUrls,
+      "Beer",
+      beerUrls.length,
+      0,
+      CONCURRENCY,
+      async (url) => {
         const html = await fetchPage(url);
         writeBeer(url, parseBeerDetails(html));
-      } catch (err) {
-        if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed ${url}: ${err.message}`);
-        if (err.message.includes("Session expired")) throw err;
+        if (++saved % BEER_BATCH_SIZE === 0) saveOutput(allCheckins);
       }
-
-      if (count % BEER_BATCH_SIZE === 0) saveOutput(allCheckins);
-      await sleep(DELAY_MS);
-    }
+    );
+    process.stdout.write("\n");
+    console.log(`   ✅ ${done} beers fetched, ${errorCount} errors`);
   } catch (err) {
     process.stdout.write("\n");
-    console.error(`\n❌ Phase 2 Error: ${err.message}`);
+    throw err;
   } finally {
-    process.stdout.write("\n");
     saveOutput(allCheckins);
-    console.log(`   ✅ ${count} beers fetched, ${errorCount} errors`);
   }
 }
 
 // ── Phase 3: Venue + Brewery details ────────────────────────────────────────
 
 async function phase3(allCheckins) {
-  // Collect all unique venue URLs (venue + purchased_at, both use /v/ pattern)
   const venueUrls = [...new Set(
     allCheckins.flatMap((c) => [c.venue?.url, c.purchased_at?.url]).filter(Boolean)
   )].filter((u) => u.includes("/v/") && !hasLocation(u));
 
-  // Collect unique brewery URLs not yet cached
   const breweryUrls = [...new Set(
     allCheckins.map((c) => c.brewery?.url).filter(Boolean)
   )].filter((u) => !hasBrewery(u));
 
-  const totalVenues = venueUrls.length;
+  const totalVenues    = venueUrls.length;
   const totalBreweries = breweryUrls.length;
+  const total          = totalVenues + totalBreweries;
 
-  if (totalVenues === 0 && totalBreweries === 0) {
+  if (total === 0) {
     console.log(`\n📍  Phase 3: All venues & breweries already cached.`);
     return;
   }
 
-  console.log(`\n📍  Phase 3: Fetching ${totalVenues} venue(s) and ${totalBreweries} brewery(ies)…`);
-
-  let count = 0;
-  const total = totalVenues + totalBreweries;
-  let errorCount = 0;
+  console.log(`\n📍  Phase 3: Fetching ${totalVenues} venue(s) and ${totalBreweries} brewery(ies) [${CONCURRENCY} workers]…`);
 
   try {
-    // --- Regular venues ---
-    for (const url of venueUrls) {
-      process.stdout.write(`\r   Location ${++count}/${total}…   `);
-      try {
-        const html = await fetchPage(url);
-        writeLocation(url, parseVenueDetails(html));
-      } catch (err) {
-        if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed ${url}: ${err.message}`);
-        if (err.message.includes("Session expired")) throw err;
-      }
-      await sleep(DELAY_MS);
+    // --- Venues ---
+    if (venueUrls.length > 0) {
+      const { done: vd, errorCount: ve } = await pool(
+        venueUrls, "Location", total, 0, CONCURRENCY,
+        async (url) => {
+          const html = await fetchPage(url);
+          writeLocation(url, parseVenueDetails(html));
+        }
+      );
+      process.stdout.write("\n");
+      console.log(`   ✅ ${vd} venues fetched, ${ve} errors`);
     }
 
     // --- Breweries (with venue sub-fetch for lat/lng) ---
-    for (const url of breweryUrls) {
-      process.stdout.write(`\r   Brewery ${++count}/${total}…   `);
-      try {
-        const html = await fetchPage(url);
-        const breweryData = parseBreweryDetails(html);
+    if (breweryUrls.length > 0) {
+      const { done: bd, errorCount: be } = await pool(
+        breweryUrls, "Brewery", total, totalVenues, CONCURRENCY,
+        async (url) => {
+          const html = await fetchPage(url);
+          const breweryData = parseBreweryDetails(html);
 
-        // Brewery pages don't have a direct map link — look for an embedded /v/ URL
-        if (breweryData.lat === null) {
-          const venueUrl = parseBreweryVenueUrl(html);
-          if (venueUrl) {
-            // Reuse already-cached venue data when possible
-            let venueDetails = readLocation(venueUrl);
-            if (!venueDetails) {
-              try {
-                await sleep(DELAY_MS);
-                const venueHtml = await fetchPage(venueUrl);
-                venueDetails = parseVenueDetails(venueHtml);
-                writeLocation(venueUrl, venueDetails);
-              } catch (e) {
-                console.warn(`\n   ⚠️ Failed brewery venue ${venueUrl}: ${e.message}`);
+          if (breweryData.lat === null) {
+            const venueUrl = parseBreweryVenueUrl(html);
+            if (venueUrl) {
+              let venueDetails = readLocation(venueUrl);
+              if (!venueDetails) {
+                try {
+                  await sleep(DELAY_MS);
+                  const venueHtml = await fetchPage(venueUrl);
+                  venueDetails = parseVenueDetails(venueHtml);
+                  writeLocation(venueUrl, venueDetails);
+                } catch (e) {
+                  console.warn(`\n   ⚠️ Failed brewery venue ${venueUrl}: ${e.message}`);
+                }
+              }
+              if (venueDetails?.lat !== null) {
+                breweryData.lat = venueDetails.lat;
+                breweryData.lng = venueDetails.lng;
               }
             }
-            if (venueDetails?.lat !== null) {
-              breweryData.lat = venueDetails.lat;
-              breweryData.lng = venueDetails.lng;
-            }
           }
-        }
 
-        writeBrewery(url, breweryData);
-      } catch (err) {
-        if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed ${url}: ${err.message}`);
-        if (err.message.includes("Session expired")) throw err;
-      }
-      await sleep(DELAY_MS);
+          writeBrewery(url, breweryData);
+        }
+      );
+      process.stdout.write("\n");
+      console.log(`   ✅ ${bd} breweries fetched, ${be} errors`);
     }
   } catch (err) {
     process.stdout.write("\n");
-    console.error(`\n❌ Phase 3 Error: ${err.message}`);
+    throw err;
   } finally {
-    process.stdout.write("\n");
     saveOutput(allCheckins);
-    console.log(`   ✅ ${count} entities fetched, ${errorCount} errors`);
   }
 }
 
@@ -178,31 +210,28 @@ async function phase4(allCheckins) {
     return;
   }
 
-  console.log(`\n🌶️   Phase 4: Fetching flavor profiles for ${toFetch.length} checkin(s)…`);
-
-  let count = 0;
-  let errorCount = 0;
+  console.log(`\n🌶️   Phase 4: Fetching flavor profiles for ${toFetch.length} checkin(s) [${CONCURRENCY} workers]…`);
 
   try {
-    for (const c of toFetch) {
-      process.stdout.write(`\r   Checkin ${++count}/${toFetch.length}…   `);
-      try {
+    const { done, errorCount } = await pool(
+      toFetch,
+      "Checkin",
+      toFetch.length,
+      0,
+      CONCURRENCY,
+      async (c) => {
         const html = await fetchPage(c.checkin_url);
         const flavor = parseCheckinFlavors(html);
         writeCheckinDetails(c.checkin_id, { flavor });
-      } catch (err) {
-        if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed ${c.checkin_url}: ${err.message}`);
-        if (err.message.includes("Session expired")) throw err;
       }
-      await sleep(DELAY_MS);
-    }
+    );
+    process.stdout.write("\n");
+    console.log(`   ✅ ${done} checkins fetched, ${errorCount} errors`);
   } catch (err) {
     process.stdout.write("\n");
-    console.error(`\n❌ Phase 4 Error: ${err.message}`);
+    throw err;
   } finally {
-    process.stdout.write("\n");
     saveOutput(allCheckins);
-    console.log(`   ✅ ${count} flavor profiles fetched, ${errorCount} errors`);
   }
 }
 
@@ -212,7 +241,7 @@ async function phase1() {
   console.log(`📋  Phase 1: Scraping checkin feed (full run)\n`);
 
   const allCheckins = [];
-  const seenIds = new Set(); // deduplicates within this run only
+  const seenIds = new Set();
   let cursor = null;
   let pageNum = 0;
   let emptyPages = 0;
@@ -226,7 +255,8 @@ async function phase1() {
     saveProgress({ checkins: allCheckins, cursor, seenIds: [...seenIds] });
     await phase2(allCheckins);
     await phase3(allCheckins);
-    await phase4(allCheckins);
+    if (INCLUDE_FLAVORS) await phase4(allCheckins);
+    else saveOutput(allCheckins); // phase2/3 already call saveOutput, but guard for skipped phase4
     isFirstFlush = false;
     newSinceLastFlush = 0;
   };
@@ -257,7 +287,7 @@ async function phase1() {
       let newOnThisPage = 0;
 
       for (const c of checkins) {
-        if (seenIds.has(c.checkin_id)) continue; // skip in-run duplicate (overlapping pages)
+        if (seenIds.has(c.checkin_id)) continue;
 
         allCheckins.push(c);
         seenIds.add(c.checkin_id);
@@ -282,16 +312,15 @@ async function phase1() {
     if (newSinceLastFlush > 0) {
       await flush(`Final batch of ${newSinceLastFlush} remaining checkins`);
     } else {
-      // Nothing new since last flush — still save output with latest db data
       saveProgress({ checkins: allCheckins, cursor, seenIds: [...seenIds] });
       saveOutput(allCheckins);
     }
 
     const summary = {
-      rated: allCheckins.filter((c) => c.rating !== null).length,
-      toasts: allCheckins.reduce((s, c) => s + (c.toasts?.count || 0), 0),
+      rated:   allCheckins.filter((c) => c.rating !== null).length,
+      toasts:  allCheckins.reduce((s, c) => s + (c.toasts?.count || 0), 0),
       friends: allCheckins.filter((c) => c.tagged_friends?.length > 0).length,
-      badges: allCheckins.reduce((s, c) => s + (c.badges?.length || 0), 0),
+      badges:  allCheckins.reduce((s, c) => s + (c.badges?.length || 0), 0),
     };
     console.log(
       `\n📊 Summary: ${allCheckins.length} checkins | ${summary.rated} rated | ${summary.toasts} toasts | ${summary.friends} friend tags | ${summary.badges} badges`
@@ -302,7 +331,11 @@ async function phase1() {
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(`🍺 Untappd Scraper XL — user: "${USER}"\n`);
+  const flags = INCLUDE_FLAVORS ? " +flavors" : "";
+  console.log(`🍺 Untappd Scraper XL — user: "${USER}" [concurrency: ${CONCURRENCY}${flags}]\n`);
+  if (!INCLUDE_FLAVORS) {
+    console.log(`ℹ️   Phase 4 (flavor profiles) skipped. Run with --include-flavors to enable it.\n`);
+  }
   await phase1();
 }
 

@@ -34,13 +34,18 @@ npm run scrape
 
 Every run scrapes the **complete** feed from scratch (newest → oldest) and writes `output/<username>_checkins.json`. Previously cached entity data (beers, venues, breweries) is reused automatically, so only truly new entities need to be fetched — making subsequent runs much faster.
 
+```bash
+npm run scrape
+# or, to also scrape individual checkin pages for flavor profiles:
+npm run scrape -- --include-flavors
+```
+
 ### What happens during a run
 
 1. **Phase 1 — Checkin feed**: Paginates through your full Untappd profile, collecting every checkin until the feed is exhausted.
 2. **Phase 2 — Beer details**: Fetches the beer page for each unique beer not yet in the local cache (`output/db/beers/`).
-3. **Phase 3 — Venue & brewery details**: Fetches venue and brewery pages for any not yet cached (`output/db/locations/`, `output/db/breweries/`).
-
-Progress is flushed to disk in batches, so a crash mid-run won't lose already-scraped data.
+3. **Phase 3 — Venue & brewery details**: Fetches venue and brewery pages for any not yet cached (`output/db/locations/`, `output/db/breweries/`). For breweries that don't expose coordinates directly, the scraper follows the embedded `/v/` venue link to get lat/lng.
+4. **Phase 4 — Flavor profiles** *(opt-in, `--include-flavors`)*: Fetches each individual checkin page to extract the user's flavor tags (e.g. `["Hoppy", "Grapefruity"]`). Results are cached in `output/db/checkins/` so only new checkins are re-fetched. ~7200 checkins adds ~30–45 min with default concurrency.
 
 ## Output
 
@@ -82,8 +87,8 @@ The main output file — fully enriched, sorted newest-first:
         "url": "https://untappd.com/DeKrommeHaring",
         "brewery_url": "https://untappd.com/DeKrommeHaring",
         "address": "Utrecht, Netherlands",
-        "lat": null,
-        "lng": null
+        "lat": 52.0197639,
+        "lng": 4.4322071
       },
       "venue": {
         "name": "Eagerly Internet",
@@ -98,10 +103,11 @@ The main output file — fully enriched, sorted newest-first:
       "serving_type": "Can",
       "comment": null,
       "photo_url": "https://images.untp.beer/…",
-      "toasts": { "count": 0, "users": [] },
+      "toasts": { "count": 1, "users": ["cbeijer"] },
       "comment_count": 0,
       "tagged_friends": ["Teuntjetripel"],
-      "badges": []
+      "badges": [],
+      "flavor": ["Hoppy", "Grapefruity", "Grapefruit Peel"]
     }
   ]
 }
@@ -115,12 +121,15 @@ Each entity is stored as a separate JSON file, keyed by its Untappd ID or slug:
 |---|---|---|
 | `db/beers/<id>.json` | numeric beer ID | `beer_url`, rating, ABV, IBU, style, description, stats |
 | `db/locations/<id>.json` | numeric venue ID | `venue_url`, address, lat/lng |
-| `db/breweries/<slug>.json` | URL-derived slug | `brewery_url`, address, lat/lng |
+| `db/breweries/<slug>.json` | URL-derived slug | `brewery_url`, address, lat/lng (resolved via embedded venue page) |
+| `db/checkins/<id>.json` | numeric checkin ID | `flavor` array (only written with `--include-flavors`) |
 
 Storing the permalink in each file means live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) can be refreshed in the future without re-scraping the entire feed.
 
 ## Notes
 
-- **Rate limiting**: 1.2 s delay between requests (set via `DELAY_MS` in `lib/config.mjs`)
+- **Concurrency**: defaults to 4 parallel workers (set `CONCURRENCY` in `lib/config.mjs`). Raise to 6–8 for faster runs; lower if you see errors
+- **Rate limiting**: 1 s delay per worker between requests
 - **Cookie expiry**: if you see a "Session expired" error, grab a fresh cookie from your browser
+- **Flavor profiles**: opt-in via `--include-flavors`; results are cached in `output/db/checkins/` so only new checkins need fetching on subsequent runs
 - **Incremental mode**: a `--incremental` flag is planned — it will stop at the first already-seen checkin (new ones always appear at the top of the feed)
