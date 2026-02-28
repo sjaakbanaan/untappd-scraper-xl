@@ -7,14 +7,13 @@ import {
   BEER_BATCH_SIZE,
   sleep,
 } from "./lib/config.mjs";
-import { parseCheckins, parseBeerDetails } from "./lib/parsers.mjs";
+import { parseCheckins, parseBeerDetails, parseVenueDetails, parseBreweryDetails } from "./lib/parsers.mjs";
+import { loadProgress, saveProgress, saveOutput } from "./lib/storage.mjs";
 import {
-  loadProgress,
-  saveProgress,
-  loadBeerCache,
-  saveBeerCache,
-  saveOutput,
-} from "./lib/storage.mjs";
+  hasBeer, writeBeer,
+  hasLocation, writeLocation,
+  hasBrewery, writeBrewery,
+} from "./lib/db.mjs";
 
 async function fetchPage(url) {
   const res = await fetch(url, { headers: HEADERS, redirect: "manual" });
@@ -30,49 +29,104 @@ async function fetchPage(url) {
   return res.text();
 }
 
+// ── Phase 2: Beer details ───────────────────────────────────────────────────
+
 async function phase2(allCheckins) {
-  console.log(`\n🔎  Phase 2: Fetching beer details…\n`);
-  const beerCache = loadBeerCache();
+  const beerUrls = [...new Set(
+    allCheckins.map((c) => c.beer?.url).filter(Boolean)
+  )].filter((u) => !hasBeer(u));
 
-  const urls = [...new Set(allCheckins.map((c) => c.beer?.url).filter(Boolean))].filter(
-    (u) => !beerCache[u] || beerCache[u].global_rating === undefined
-  );
+  if (beerUrls.length === 0) {
+    console.log(`\n🍺  Phase 2: All beers already cached.`);
+    return;
+  }
 
-  console.log(`   ${urls.length} beers to fetch (${Object.keys(beerCache).length - urls.length} fully cached)`);
+  console.log(`\n🍺  Phase 2: Fetching ${beerUrls.length} new beer(s)…`);
 
   let count = 0;
   let errorCount = 0;
 
   try {
-    for (const url of urls) {
-      process.stdout.write(`\r🍺  Beer ${++count}/${urls.length}…   `);
-
+    for (const url of beerUrls) {
+      process.stdout.write(`\r   Beer ${++count}/${beerUrls.length}…   `);
       try {
         const html = await fetchPage(url);
-        beerCache[url] = parseBeerDetails(html);
+        writeBeer(url, parseBeerDetails(html));
       } catch (err) {
-        if (++errorCount <= 5) console.warn(`   ⚠️ Failed ${url}: ${err.message}`);
+        if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed ${url}: ${err.message}`);
         if (err.message.includes("Session expired")) throw err;
       }
 
-      if (count % BEER_BATCH_SIZE === 0) {
-        saveBeerCache(beerCache);
-        saveOutput(allCheckins, beerCache);
-      }
+      if (count % BEER_BATCH_SIZE === 0) saveOutput(allCheckins);
       await sleep(DELAY_MS);
     }
   } catch (err) {
     process.stdout.write("\n");
     console.error(`\n❌ Phase 2 Error: ${err.message}`);
   } finally {
-    if (count > 0) process.stdout.write("\n");
-    saveBeerCache(beerCache);
-    saveOutput(allCheckins, beerCache);
-    if (urls.length > 0) {
-      console.log(`\n✅ Beer details: ${Object.keys(beerCache).length} cached, ${errorCount} errors`);
-    }
+    process.stdout.write("\n");
+    saveOutput(allCheckins);
+    console.log(`   ✅ ${count} beers fetched, ${errorCount} errors`);
   }
 }
+
+// ── Phase 3: Venue + Brewery details ────────────────────────────────────────
+
+async function phase3(allCheckins) {
+  // Collect all unique venue URLs (venue + purchased_at, both use /v/ pattern)
+  const venueUrls = [...new Set(
+    allCheckins.flatMap((c) => [c.venue?.url, c.purchased_at?.url]).filter(Boolean)
+  )].filter((u) => u.includes("/v/") && !hasLocation(u));
+
+  // Collect unique brewery URLs
+  const breweryUrls = [...new Set(
+    allCheckins.map((c) => c.brewery?.url).filter(Boolean)
+  )].filter((u) => !hasBrewery(u));
+
+  const totalVenues = venueUrls.length;
+  const totalBreweries = breweryUrls.length;
+
+  if (totalVenues === 0 && totalBreweries === 0) {
+    console.log(`\n📍  Phase 3: All venues & breweries already cached.`);
+    return;
+  }
+
+  console.log(`\n📍  Phase 3: Fetching ${totalVenues} venue(s) and ${totalBreweries} brewery(ies)…`);
+
+  let count = 0;
+  const total = totalVenues + totalBreweries;
+  let errorCount = 0;
+
+  const fetchEntity = async (url, label, parseFn, writeFn) => {
+    process.stdout.write(`\r   ${label} ${++count}/${total}…   `);
+    try {
+      const html = await fetchPage(url);
+      writeFn(url, parseFn(html));
+    } catch (err) {
+      if (++errorCount <= 5) console.warn(`\n   ⚠️ Failed ${url}: ${err.message}`);
+      if (err.message.includes("Session expired")) throw err;
+    }
+    await sleep(DELAY_MS);
+  };
+
+  try {
+    for (const url of venueUrls) {
+      await fetchEntity(url, "Location", parseVenueDetails, writeLocation);
+    }
+    for (const url of breweryUrls) {
+      await fetchEntity(url, "Brewery", parseBreweryDetails, writeBrewery);
+    }
+  } catch (err) {
+    process.stdout.write("\n");
+    console.error(`\n❌ Phase 3 Error: ${err.message}`);
+  } finally {
+    process.stdout.write("\n");
+    saveOutput(allCheckins);
+    console.log(`   ✅ ${count} entities fetched, ${errorCount} errors`);
+  }
+}
+
+// ── Phase 1: Checkin feed ────────────────────────────────────────────────────
 
 async function phase1(progress) {
   console.log(`📋  Phase 1: Scraping checkin feed\n`);
@@ -84,16 +138,15 @@ async function phase1(progress) {
   let emptyPages = 0;
   let done = false;
 
-  // Track how many new checkins have been collected since last flush
   let newSinceLastFlush = 0;
-  // First flush threshold is 15 (initial page load), then 25 (each "show more")
   let isFirstFlush = allCheckins.length === 0;
   const nextFlushAt = () => (isFirstFlush ? FIRST_BATCH_SIZE : BATCH_SIZE);
 
   const flush = async (label) => {
-    console.log(`\n💾  ${label} – flushing ${allCheckins.length} checkins to disk…`);
+    console.log(`\n💾  ${label} – flushing ${allCheckins.length} checkins…`);
     saveProgress({ checkins: allCheckins, cursor, seenIds: [...seenIds] });
     await phase2(allCheckins);
+    await phase3(allCheckins);
     isFirstFlush = false;
     newSinceLastFlush = 0;
   };
@@ -132,7 +185,6 @@ async function phase1(progress) {
         newOnThisPage++;
         newSinceLastFlush++;
 
-        // Flush when we've hit the threshold for this batch
         if (newSinceLastFlush >= nextFlushAt()) {
           await flush(`Batch of ${newSinceLastFlush} new checkins`);
         }
@@ -148,11 +200,9 @@ async function phase1(progress) {
     if (err.message.includes("Session expired")) throw err;
     console.error(`\n❌ Phase 1 Error: ${err.message}`);
   } finally {
-    // Final flush for any remaining new checkins
     if (newSinceLastFlush > 0) {
       await flush(`Final batch of ${newSinceLastFlush} remaining checkins`);
     } else {
-      // Still save progress even if nothing new
       saveProgress({ checkins: allCheckins, cursor, seenIds: [...seenIds] });
     }
 
@@ -163,10 +213,12 @@ async function phase1(progress) {
       badges: allCheckins.reduce((s, c) => s + (c.badges?.length || 0), 0),
     };
     console.log(
-      `\n📊 Phase 1 summary: ${allCheckins.length} checkins | ${summary.rated} rated | ${summary.toasts} toasts | ${summary.friends} friends | ${summary.badges} badges`
+      `\n📊 Summary: ${allCheckins.length} checkins | ${summary.rated} rated | ${summary.toasts} toasts | ${summary.friends} friend tags | ${summary.badges} badges`
     );
   }
 }
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log(`🍺 Untappd Scraper XL — user: "${USER}"\n`);
