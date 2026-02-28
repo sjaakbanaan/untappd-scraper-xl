@@ -34,7 +34,7 @@ Edit `.env` and fill in your Untappd credentials:
 npm run scrape:full
 ```
 
-This paginates your **entire** Untappd feed from newest to oldest, fetches beer/venue/brewery details, and writes `output/<username>_checkins.json`. Depending on your history this can take a while — it only needs to be done once.
+This paginates your **entire** Untappd feed from newest to oldest, fetches beer/venue/brewery details, and writes `output/<username>_checkins.json`. Depending on your history this can take a while (approx. 25 minutes for 1000 checkins). It only needs to be done once.
 
 ### Keeping up to date
 
@@ -85,63 +85,63 @@ Loads the existing output file and re-scrapes only the fields that change over t
 
 ### `output/<username>_checkins.json`
 
-The main output file — fully enriched, sorted newest-first:
+The main output file — fully enriched, sorted newest-first (values left blank for privacy reasons):
 
 ```json
 {
   "meta": {
-    "user": "sjaakbanaan",
-    "total_checkins": 7231,
+    "user": "...",
+    "total_checkins": ...,
     "scraped_at": "2026-02-28T19:00:00.000Z",
     "oldest_checkin": "2013-07-12T18:00:00.000Z",
     "newest_checkin": "2026-02-27T16:19:10.000Z"
   },
   "checkins": [
     {
-      "checkin_id": 1552073115,
-      "checkin_url": "https://untappd.com/user/sjaakbanaan/checkin/1552073115",
+      "checkin_id": ...,
+      "checkin_url": "https://untappd.com/user/.../checkin/...",
       "created_at": "2026-02-27T16:19:10.000Z",
       "beer": {
-        "name": "Barbarian Fishing Superdelic Columbus",
-        "url": "https://untappd.com/b/de-kromme-haring-…/6599834",
-        "label_url": "https://assets.untappd.com/…",
-        "beer_url": "https://untappd.com/b/de-kromme-haring-…/6599834",
+        "name": "...",
+        "url": "https://untappd.com/b/.../...",
+        "label_url": "https://assets.untappd.com/...",
+        "beer_url": "https://untappd.com/b/.../...",
         "global_rating": 3.84,
         "global_rating_count": 56,
         "abv": 8,
         "ibu": null,
-        "style": "IPA - Imperial / Double New England / Hazy",
+        "style": "... - ...",
         "description": "…",
         "total_checkins": 61,
         "unique_users": 61,
         "monthly_checkins": 61
       },
       "brewery": {
-        "name": "De Kromme Haring",
-        "url": "https://untappd.com/DeKrommeHaring",
-        "brewery_url": "https://untappd.com/DeKrommeHaring",
-        "address": "Utrecht, Netherlands",
-        "lat": 52.0197639,
-        "lng": 4.4322071
+        "name": "...",
+        "url": "https://untappd.com/...",
+        "brewery_url": "https://untappd.com/...",
+        "address": "...",
+        "lat": ...,
+        "lng": ...
       },
       "venue": {
-        "name": "Eagerly Internet",
-        "url": "https://untappd.com/v/eagerly-internet/8632005",
-        "venue_url": "https://untappd.com/v/eagerly-internet/8632005",
-        "address": "Jansveld 31 Utrecht, Utrecht",
-        "lat": 52.0945587,
-        "lng": 5.1205621
+        "name": "...",
+        "url": "https://untappd.com/v/.../...",
+        "venue_url": "https://untappd.com/v/.../...",
+        "address": "...",
+        "lat": ...,
+        "lng": ...
       },
-      "purchased_at": { "…": "same shape as venue" },
+      "purchased_at": { "…": "..." },
       "rating": 3.9,
       "serving_type": "Can",
-      "comment": null,
+      "comment": "...",
       "photo_url": "https://images.untp.beer/…",
-      "toasts": { "count": 1, "users": ["cbeijer"] },
+      "toasts": { "count": 3, "users": ["..."] },
       "comment_count": 0,
-      "tagged_friends": ["Teuntjetripel"],
+      "tagged_friends": ["..."],
       "badges": [],
-      "flavor": ["Hoppy", "Grapefruity", "Grapefruit Peel"]
+      "flavor": ["Hoppy", "Citrus", "Bitter"]
     }
   ]
 }
