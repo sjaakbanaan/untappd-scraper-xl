@@ -1,0 +1,15 @@
+{
+  "name": "untappd-scraper-xl",
+  "version": "1.0.0",
+  "description": "Scrape all Untappd checkins for a user using session cookies",
+  "type": "module",
+  "main": "scrape.mjs",
+  "scripts": {
+    "scrape": "node scrape.mjs",
+    "scrape:fresh": "node scrape.mjs --fresh"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7"
+  }
+}
