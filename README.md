@@ -15,7 +15,7 @@ Edit `.env` and fill in your Untappd credentials:
 | Variable | Description |
 |---|---|
 | `UNTAPPD_COOKIE` | Your session cookie (see below) |
-| `UNTAPPD_USER` | Your Untappd username (default: `sjaakbanaan`) |
+| `UNTAPPD_USER` | Your Untappd username |
 
 ### Getting your session cookie
 
@@ -117,7 +117,7 @@ Each entity is stored as a separate JSON file, keyed by its Untappd ID or slug:
 | `db/locations/<id>.json` | numeric venue ID | `venue_url`, address, lat/lng |
 | `db/breweries/<slug>.json` | URL-derived slug | `brewery_url`, address, lat/lng |
 
-Storing the permalink in each file means a future `--refresh-stats` command can re-fetch and update live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) without re-scraping the full feed.
+Storing the permalink in each file means live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) can be refreshed in the future without re-scraping the entire feed.
 
 ## Notes
 
