@@ -5,8 +5,7 @@
   "type": "module",
   "main": "scrape.mjs",
   "scripts": {
-    "scrape": "node scrape.mjs",
-    "scrape:fresh": "node scrape.mjs --fresh"
+    "scrape": "node scrape.mjs"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
