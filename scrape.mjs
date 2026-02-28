@@ -8,7 +8,7 @@ import {
   sleep,
 } from "./lib/config.mjs";
 import { parseCheckins, parseBeerDetails, parseVenueDetails, parseBreweryDetails } from "./lib/parsers.mjs";
-import { loadProgress, saveProgress, saveOutput } from "./lib/storage.mjs";
+import { saveProgress, saveOutput } from "./lib/storage.mjs";
 import {
   hasBeer, writeBeer,
   hasLocation, writeLocation,
@@ -128,18 +128,17 @@ async function phase3(allCheckins) {
 
 // ── Phase 1: Checkin feed ────────────────────────────────────────────────────
 
-async function phase1(progress) {
-  console.log(`📋  Phase 1: Scraping checkin feed\n`);
+async function phase1() {
+  console.log(`📋  Phase 1: Scraping checkin feed (full run)\n`);
 
-  let allCheckins = progress.checkins;
-  const seenIds = new Set(progress.seenIds || allCheckins.map((c) => c.checkin_id));
+  const allCheckins = [];
+  const seenIds = new Set(); // deduplicates within this run only
   let cursor = null;
   let pageNum = 0;
   let emptyPages = 0;
-  let done = false;
 
   let newSinceLastFlush = 0;
-  let isFirstFlush = allCheckins.length === 0;
+  let isFirstFlush = true;
   const nextFlushAt = () => (isFirstFlush ? FIRST_BATCH_SIZE : BATCH_SIZE);
 
   const flush = async (label) => {
@@ -152,7 +151,7 @@ async function phase1(progress) {
   };
 
   try {
-    while (!done) {
+    while (true) {
       pageNum++;
       const url = cursor
         ? `https://untappd.com/profile/more_feed/${USER}/${cursor}?v2=true`
@@ -164,7 +163,10 @@ async function phase1(progress) {
       const checkins = parseCheckins(html);
 
       if (checkins.length === 0) {
-        if (++emptyPages >= 3) break;
+        if (++emptyPages >= 3) {
+          console.log(`   → Feed exhausted after ${pageNum} pages.`);
+          break;
+        }
         console.log("⚠️   Empty page, retrying…");
         await sleep(DELAY_MS * 2);
         continue;
@@ -174,11 +176,7 @@ async function phase1(progress) {
       let newOnThisPage = 0;
 
       for (const c of checkins) {
-        if (seenIds.has(c.checkin_id)) {
-          console.log(`   → Hit existing checkin (ID: ${c.checkin_id}). Stopping incremental update.`);
-          done = true;
-          break;
-        }
+        if (seenIds.has(c.checkin_id)) continue; // skip in-run duplicate (overlapping pages)
 
         allCheckins.push(c);
         seenIds.add(c.checkin_id);
@@ -203,7 +201,9 @@ async function phase1(progress) {
     if (newSinceLastFlush > 0) {
       await flush(`Final batch of ${newSinceLastFlush} remaining checkins`);
     } else {
+      // Nothing new since last flush but we still need to save output with latest db data
       saveProgress({ checkins: allCheckins, cursor, seenIds: [...seenIds] });
+      saveOutput(allCheckins);
     }
 
     const summary = {
@@ -222,8 +222,7 @@ async function phase1(progress) {
 
 async function main() {
   console.log(`🍺 Untappd Scraper XL — user: "${USER}"\n`);
-  const progress = loadProgress();
-  await phase1(progress);
+  await phase1();
 }
 
 main();
