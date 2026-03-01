@@ -100,50 +100,59 @@ The main output file — fully enriched, sorted newest-first (some values left b
   },
   "checkins": [
     {
-      "checkin_id": "...",
-      "checkin_url": "https://untappd.com/user/.../checkin/...",
-      "created_at": "2026-02-27T16:19:10.000Z",
+      "checkin_id": 1311912126,
+      "checkin_url": "https://untappd.com/user/sjaakbanaan/checkin/1311912126",
+      "created_at": "2023-09-08T15:19:55.000Z",
       "beer": {
-        "name": "Barbarian Fishing Superdelic Columbus",
-        "url": "https://untappd.com/b/de-kromme-haring-…/6599834",
-        "label_url": "https://assets.untappd.com/…",
-        "beer_url": "https://untappd.com/b/de-kromme-haring-…/6599834",
-        "global_rating": 3.84,
-        "global_rating_count": 56,
+        "name": "Whale Shark V5",
+        "url": "https://untappd.com/b/de-kromme-haring-whale-shark-v5/5477759",
+        "label_url": "https://assets.untappd.com/site/beer_logos/beer-5477759_959a1_sm.jpeg",
+        "global_rating": 3.90078,
+        "global_rating_count": 903,
         "abv": 8,
         "ibu": null,
         "style": "IPA - Imperial / Double New England / Hazy",
-        "description": "…",
-        "total_checkins": 61,
-        "unique_users": 61,
-        "monthly_checkins": 61
+        "description": "With Whale Shark we explore the creamy depths of the New England Double IPA. The que Show More",
+        "total_checkins": 992,
+        "unique_users": 950,
+        "monthly_checkins": null
       },
       "brewery": {
-        "name": "De Kromme Haring",
+        "name": "De Kromme Haring - Utrecht, Utrecht - Untappd",
         "url": "https://untappd.com/DeKrommeHaring",
-        "brewery_url": "https://untappd.com/DeKrommeHaring",
         "address": "Utrecht, Netherlands",
         "lat": 52.0197639,
         "lng": 4.4322071
       },
       "venue": {
-        "name": "...",
-        "url": "https://untappd.com/v/.../...",
-        "venue_url": "https://untappd.com/v/.../...",
-        "address": "...",
-        "lat": 0,
-        "lng": 0
+        "name": "Stadhuisplein",
+        "url": "https://untappd.com/v/stadhuisplein/3167552",
+        "address": "Korte minrebroederstraat 3 Utrecht, Utrecht",
+        "lat": 52.0921097,
+        "lng": 5.1202483
       },
-      "purchased_at": { "…": "same shape as venue" },
-      "rating": 3.9,
+      "purchased_at": {
+        "name": "Locals Utrecht",
+        "url": "https://untappd.com/v/locals-utrecht/11580999",
+        "address": "Vismarkt 2 Utrecht, Utrecht",
+        "lat": 52.0913429,
+        "lng": 5.1201501
+      },
+      "rating": 4,
       "serving_type": "Can",
       "comment": null,
-      "photo_url": "https://images.untp.beer/…",
-      "toasts": { "count": 1, "users": ["cbeijer"] },
+      "photo_url": null,
+      "toasts": {
+        "count": 2,
+        "users": [
+          "...",
+          "..."
+        ]
+      },
       "comment_count": 0,
-      "tagged_friends": ["Teuntjetripel"],
+      "tagged_friends": [],
       "badges": [],
-      "flavor": ["Hoppy", "Grapefruity", "Grapefruit Peel"]
+      "flavor": null
     }
   ]
 }
