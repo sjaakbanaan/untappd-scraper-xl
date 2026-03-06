@@ -1,4 +1,4 @@
-# Untappd Scraper XL
+# Untappd Scraper XL v0.9.0
 
 Scrape **all** your Untappd checkins into a rich, structured JSON file.  
 No Chromium/Puppeteer needed — just `fetch` + `cheerio` + your session cookie.
