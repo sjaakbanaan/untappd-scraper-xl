@@ -15,7 +15,7 @@ Edit `.env` and fill in your Untappd credentials:
 | Variable | Description |
 |---|---|
 | `UNTAPPD_COOKIE` | Your session cookie (see below) |
-| `UNTAPPD_USER` | Your Untappd username |
+| `UNTAPPD_USER` | Your Untappd username (ony works with the cookie from the same user) |
 
 ### Getting your session cookie
 
