@@ -1,7 +1,14 @@
 # Untappd Scraper XL v0.9.0
 
-Scrape **all** your Untappd checkins into a rich, structured JSON file.  
-No Chromium/Puppeteer needed — just `fetch` + `cheerio` + your session cookie.
+Scrape **all** your Untappd checkins into a rich, structured JSON file, so you can import it into tools like [Untappd Data Visualised](https://github.com/sjaakbanaan/untappd-data-visualised). 
+
+## How this works (for non-developers)
+
+If you've never used a script like this before, here is a quick overview:
+
+- **Scraping:** This script automatically browses your Untappd feed and extracts all the data, saving you from doing it manually.
+- **npm:** To run this script on your computer, you need to install [Node.js](https://nodejs.org/), which includes `npm`. This lets you run commands like `npm run scrape` in your terminal.
+- **JSON:** The extracted data is saved in a `.json` file, which is a standard data format that other applications (like data visualization tools) can easily read.
 
 ## Setup
 
