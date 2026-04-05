@@ -1,6 +1,6 @@
 {
   "name": "untappd-scraper-xl",
-  "version": "0.9.0",
+  "version": "0.9.5",
   "description": "Scrape all Untappd checkins for a user using session cookies",
   "type": "module",
   "main": "scrape.mjs",

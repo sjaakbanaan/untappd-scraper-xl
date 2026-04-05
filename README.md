@@ -1,4 +1,4 @@
-# Untappd Scraper XL v0.9.0
+# Untappd Scraper XL v0.9.5
 
 Scrape **all** your Untappd checkins into a rich, structured JSON file, so you can import it into tools like [Untappd Data Visualised](https://github.com/sjaakbanaan/untappd-data-visualised). 
 
@@ -22,7 +22,8 @@ Edit `.env` and fill in your Untappd credentials:
 | Variable | Description |
 |---|---|
 | `UNTAPPD_COOKIE` | Your session cookie (see below) |
-| `UNTAPPD_USER` | Your Untappd username (ony works with the cookie from the same user) |
+| `UNTAPPD_USER` | Your Untappd username (only works with the cookie from the same user) |
+| `MAPBOX_KEY` | *(Optional)* Your [Mapbox Access Token](https://account.mapbox.com/) for geocoding |
 
 ### Getting your session cookie
 
@@ -185,3 +186,4 @@ Storing the permalink in each file means live stats (`global_rating`, `global_ra
 - **Cookie expiry**: if you see a "Session expired" error, grab a fresh cookie from your browser
 - **Flavor profiles**: opt-in via `--include-flavors`; results are cached in `output/db/checkins/` so only new checkins need fetching on subsequent runs
 - **scrape:stats**: opt-in via `--stats`; re-scrapes beer stats and checkin activity (toasts, comments) for every entry in the existing output file without touching the rest of your data
+- **Mapbox Key**: if no `MAPBOX_KEY` is provided, the scraper will still run, but it won't be able to enrich location data (reverse-geocoding for clean names or forward-geocoding for missing coordinates). Resulting JSON will rely on raw Untappd data.
