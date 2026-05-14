@@ -9,9 +9,9 @@
  * Usage: node seed-beer-cache.mjs
  */
 
-import { readFileSync, existsSync } from "fs";
-import { OUTPUT_FILE, BEERS_DIR } from "./lib/config.mjs";
-import { extractBeerId, hasBeer, writeBeer } from "./lib/db.mjs";
+import { readFileSync, existsSync } from 'fs';
+import { OUTPUT_FILE, BEERS_DIR } from './lib/config.mjs';
+import { extractBeerId, hasBeer, writeBeer } from './lib/db.mjs';
 
 if (!existsSync(OUTPUT_FILE)) {
   console.error(`❌  Output file not found: ${OUTPUT_FILE}`);
@@ -19,7 +19,7 @@ if (!existsSync(OUTPUT_FILE)) {
 }
 
 console.log(`📂  Reading ${OUTPUT_FILE}…`);
-const { checkins } = JSON.parse(readFileSync(OUTPUT_FILE, "utf-8"));
+const { checkins } = JSON.parse(readFileSync(OUTPUT_FILE, 'utf-8'));
 console.log(`   → ${checkins.length} checkins loaded\n`);
 
 let seeded = 0;
@@ -28,10 +28,16 @@ let noData = 0;
 
 for (const c of checkins) {
   const url = c.beer?.url;
-  if (!url) { noData++; continue; }
+  if (!url) {
+    noData++;
+    continue;
+  }
 
   // Already cached — nothing to do
-  if (hasBeer(url)) { skipped++; continue; }
+  if (hasBeer(url)) {
+    skipped++;
+    continue;
+  }
 
   // The beer object on the checkin may contain enriched fields from a previous
   // Phase 2 run (style, description, abv, ibu, etc.). Write whatever is there.
@@ -45,9 +51,11 @@ for (const c of checkins) {
   }
 }
 
-process.stdout.write("\n");
+process.stdout.write('\n');
 console.log(`\n✅  Done!`);
 console.log(`   Seeded : ${seeded}`);
 console.log(`   Already cached: ${skipped}`);
 console.log(`   No beer URL: ${noData}`);
-console.log(`\nYou can now run 'npm run scrape' — Phase 2 will skip these beers.`);
+console.log(
+  `\nYou can now run 'npm run scrape' — Phase 2 will skip these beers.`
+);
