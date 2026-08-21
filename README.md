@@ -16,8 +16,6 @@ A first full scrape can take a while (roughly 25 minutes per 1000 checkins). You
 
 ---
 
-
-
 ## 1. What you need
 
 - A computer (macOS, Windows, or Linux)
@@ -44,8 +42,6 @@ On macOS, Homebrew users can instead run `brew install node`.
 
 ---
 
-
-
 ## 2. Get this project on your computer
 
 Pick one:
@@ -66,8 +62,6 @@ cd untappd-scraper-xl
 
 ---
 
-
-
 ## 3. Open a terminal in this folder
 
 A **terminal** is a text window where you type commands. You must run commands **from inside** the project folder, not from your home folder.
@@ -83,23 +77,9 @@ A **terminal** is a text window where you type commands. You must run commands *
 2. Click the address bar, type `powershell`, press Enter
   Or: in the folder, hold `Shift` and right-click → **Open PowerShell window here** / **Open in Terminal**
 
-**Linux**
-
-Open a terminal and `cd` into the unzipped folder, or right-click the folder → **Open in Terminal**.
-
-**If you use Cursor or VS Code:** File → Open Folder…, choose this project, then open the built-in terminal (**Terminal → New Terminal**). That terminal is already in the right folder.
-
-Check you are in the right place:
-
-```bash
-ls
-```
-
 On Windows PowerShell, `ls` also works. You should see files such as `package.json`, `README.md`, and `.env.example`. If not, you are in the wrong folder.
 
 ---
-
-
 
 ## 4. Install the project libraries
 
@@ -112,8 +92,6 @@ npm install
 This reads `package.json` and downloads helpers into a `node_modules` folder. You only need to do this once (or again after you update the project). It can take a minute. When it finishes without a red error, continue.
 
 ---
-
-
 
 ## 5. Create your settings file
 
@@ -157,13 +135,32 @@ Do **not** share `.env` or commit it to Git. The cookie is equivalent to being l
 
 ---
 
-
-
 ## 6. Get your Untappd cookie
 
 The scraper cannot log in with a password. It reuses the session cookie your browser already has after you log in at [untappd.com](https://untappd.com). Log in there **before** this step.
 
-### Option A — Let the script copy it (recommended)
+### Option A — Copy the cookie from your browser
+
+This is the reliable method. It works in any browser.
+
+Video walkthrough:
+
+https://github.com/user-attachments/assets/46701bff-762f-408a-9e40-439aa769cc54
+
+1. Log into [untappd.com](https://untappd.com)
+2. Open DevTools (`F12`, or `Cmd+Option+I` on Mac)
+3. Open the **Network** tab and reload the page
+4. Click the **Doc** filter, then click the request whose name starts with `stats?id=`
+5. Under **Request Headers**, copy the full `Cookie:` value
+6. Paste it into `.env` as `UNTAPPD_COOKIE="…"` (keep the quotes)
+
+Then go to [step 7](#7-run-your-first-scrape).
+
+The cookie expires. If a later scrape says the session expired, log into Untappd in your browser again and repeat these steps.
+
+### Option B — Let the script copy it
+
+A shortcut if you would rather not use DevTools. It can fail depending on your browser and OS; if it does, use option A.
 
 In the project terminal:
 
@@ -198,28 +195,9 @@ npm run cookie -- --dry-run
 
 - Needs Node.js 22+ (built-in SQLite)
 - Firefox is usually the most reliable, because its cookies are stored in a readable database
-- Chrome, Edge, Brave, Chromium, and Arc encrypt cookies. The helper supports common macOS, Linux, and Windows setups. Newer Windows Chrome-family profiles may block export (App-Bound Encryption). In that case use Firefox or option B.
-
-
-
-### Option B — Copy the cookie from your browser
-
-Video walkthrough:
-
-[https://github.com/user-attachments/assets/46701bff-762f-408a-9e40-439aa769cc54](https://github.com/user-attachments/assets/46701bff-762f-408a-9e40-439aa769cc54)
-
-1. Log into [untappd.com](https://untappd.com)
-2. Open DevTools (`F12`, or `Cmd+Option+I` on Mac)
-3. Open the **Network** tab and reload the page
-4. Click the **Doc** filter, then click the request whose name starts with `stats?id=`
-5. Under **Request Headers**, copy the full `Cookie:` value
-6. Paste it into `.env` as `UNTAPPD_COOKIE="…"` (keep the quotes)
-
-The cookie expires. If a later scrape says the session expired, log into Untappd in your browser again and repeat this step (or re-run `npm run cookie`).
+- Chrome, Edge, Brave, Chromium, and Arc encrypt cookies. The helper supports common macOS, Linux, and Windows setups. Newer Windows Chrome-family profiles may block export (App-Bound Encryption). In that case use Firefox or option A.
 
 ---
-
-
 
 ## 7. Run your first scrape
 
@@ -235,8 +213,6 @@ When it finishes, look in the `output` folder next to the rest of the project fi
 
 ---
 
-
-
 ## 8. Keep the file up to date
 
 After the first full scrape, you do **not** need to download everything again. After a drinking session:
@@ -248,8 +224,6 @@ npm run scrape
 That starts at the top of your feed and **stops at the first checkin already in your file**. New checkins are merged in. If there is no output file yet, this command automatically does a full scrape instead.
 
 ---
-
-
 
 ## All commands
 
@@ -267,8 +241,6 @@ That starts at the top of your feed and **stops at the first checkin already in 
 npm run scrape -- --include-flavors
 npm run scrape:full -- --include-flavors
 ```
-
-
 
 ### Incremental mode (`npm run scrape`)
 
@@ -298,30 +270,23 @@ Loads the existing output file and re-scrapes only the fields that change over t
 
 ---
 
-
-
 ## Troubleshooting
 
 
-| What you see                                            | What it usually means                                                     | What to do                                                                                     |
-| ------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `node: command not found` or `'node' is not recognized` | Node.js is not installed, or the terminal was opened before installing it | Install Node from [nodejs.org](https://nodejs.org), then **close and reopen** the terminal     |
-| `npm: command not found`                                | Same as above; `npm` ships with Node                                      | Reinstall Node LTS and reopen the terminal                                                     |
-| `ENOENT` / `package.json` not found                     | You are not in the project folder                                         | `cd` into the unzipped `untappd-scraper-xl` folder and try again                               |
-| `Set UNTAPPD_COOKIE in your .env file first`            | `.env` is missing, or the cookie line is still the placeholder            | Create `.env` from `.env.example` and complete [step 6](#6-get-your-untappd-cookie)            |
-| `No Untappd cookies found`                              | You are not logged in, or the helper cannot read that browser             | Log into untappd.com, try `--browser firefox`, or copy the cookie manually                     |
-| `Session expired`                                       | The cookie went stale                                                     | Log into Untappd in your browser, then run `npm run cookie` again (or paste a fresh cookie)    |
-| Lots of failed requests / throttling                    | Too many parallel requests                                                | Leave it as-is first; if it keeps failing, lower `CONCURRENCY` in `lib/config.mjs` (see Notes) |
-| Cookie helper errors about SQLite                       | Node is too old                                                           | Upgrade to Node.js 22 or newer                                                                 |
-
+| What you see                                            | What it usually means                                                     | What to do                                                                                             |
+| ------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `node: command not found` or `'node' is not recognized` | Node.js is not installed, or the terminal was opened before installing it | Install Node from [nodejs.org](https://nodejs.org), then **close and reopen** the terminal             |
+| `npm: command not found`                                | Same as above; `npm` ships with Node                                      | Reinstall Node LTS and reopen the terminal                                                             |
+| `ENOENT` / `package.json` not found                     | You are not in the project folder                                         | `cd` into the unzipped `untappd-scraper-xl` folder and try again                                       |
+| `Set UNTAPPD_COOKIE in your .env file first`            | `.env` is missing, or the cookie line is still the placeholder            | Create `.env` from `.env.example` and complete [step 6](#6-get-your-untappd-cookie)                    |
+| `No Untappd cookies found`                              | You are not logged in, or the helper cannot read that browser             | Log into untappd.com, then copy the cookie from DevTools (option A). Or retry with `--browser firefox` |
+| `Session expired`                                       | The cookie went stale                                                     | Log into Untappd in your browser, then paste a fresh cookie (or re-run `npm run cookie`)               |
+| Lots of failed requests / throttling                    | Too many parallel requests                                                | Leave it as-is first; if it keeps failing, lower `CONCURRENCY` in `lib/config.mjs` (see Notes)         |
+| Cookie helper errors about SQLite                       | Node is too old                                                           | Upgrade to Node.js 22 or newer                                                                         |
 
 ---
 
-
-
 ## Output
-
-
 
 ### `output/<username>_checkins.json`
 
@@ -397,7 +362,6 @@ The main output file — fully enriched, sorted newest-first (some values left b
 ```
 
 
-
 ### `output/db/` — entity cache
 
 Each entity is stored as a separate JSON file, keyed by its Untappd ID or slug:
@@ -414,8 +378,6 @@ Each entity is stored as a separate JSON file, keyed by its Untappd ID or slug:
 Storing the permalink in each file means live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) can be refreshed with `npm run scrape:stats`.
 
 ---
-
-
 
 ## Notes
 
