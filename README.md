@@ -27,6 +27,33 @@ Edit `.env` and fill in your Untappd credentials:
 
 ### Getting your session cookie
 
+If you are logged into Untappd in a local browser, try:
+
+```bash
+npm run cookie
+```
+
+This scans common Chrome-family and Firefox profiles on macOS, Linux, and Windows, then updates `UNTAPPD_COOKIE` in `.env` with the `cf_clearance`, `ut_d_l`, and `_ALGOLIA` values used by the scraper.
+
+Useful options:
+
+```bash
+npm run cookie -- --browser firefox
+npm run cookie -- --browser chrome --profile "Profile 1"
+npm run --silent cookie -- --print
+npm run cookie -- --dry-run
+```
+
+`--print` writes only the ready-to-paste `Cookie` header to standard output.
+
+Notes:
+
+- The helper needs a modern Node.js version with built-in SQLite support.
+- Firefox is the most portable option because its cookies are stored in a readable SQLite database.
+- Chrome, Edge, Brave, Chromium, and Arc encrypt cookies with OS-protected keys. The helper handles common macOS, Linux, and Windows formats, but newer Windows Chrome-family profiles may use App-Bound Encryption that blocks external cookie export. If that happens, use Firefox or copy the cookie manually.
+
+Manual fallback:
+
 1. Log into [untappd.com](https://untappd.com) in your browser
 2. Open DevTools → **Network** tab
 3. Reload the page
@@ -58,6 +85,7 @@ Scrapes the feed from the top and **stops as soon as it hits a checkin already i
 
 | Script | Flag | What it does |
 |---|---|---|
+| `npm run cookie` | *(none)* | **Cookie helper** — fetch the current Untappd cookie from your browser and write it to `.env` |
 | `npm run scrape` | *(default)* | **Incremental** — fetch only new checkins, stop at first known one, merge into existing output |
 | `npm run scrape:full` | `--full` | **Full scrape** — paginate the entire feed newest → oldest |
 | `npm run scrape:stats` | `--stats` | **Stats refresh** — re-scrape live beer stats, toasts & comments for every existing checkin |

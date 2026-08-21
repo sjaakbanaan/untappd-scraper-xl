@@ -5,6 +5,7 @@
   "type": "module",
   "main": "scrape.mjs",
   "scripts": {
+    "cookie": "node scripts/fetch-untappd-cookie.mjs",
     "scrape": "node scrape.mjs",
     "scrape:full": "node scrape.mjs --full",
     "scrape:stats": "node scrape.mjs --stats"
