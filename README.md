@@ -25,9 +25,22 @@ Edit `.env` and fill in your Untappd credentials:
 | `UNTAPPD_USER`   | Your Untappd username (only works with the cookie from the same user)              |
 | `MAPBOX_KEY`     | *(Optional)* Your [Mapbox Access Token](https://account.mapbox.com/) for geocoding |
 
-### Getting your session cookie
+### Getting your session cookies
 
-If you are logged into Untappd in a local browser, try:
+Check out this video to see how to fetch your your cookies:
+https://github.com/user-attachments/assets/46701bff-762f-408a-9e40-439aa769cc54
+
+1. Log into [untappd.com](https://untappd.com) in your browser
+2. Open DevTools → **Network** tab
+3. Reload the page
+4. Click on the 'Doc' filter button and click on the source that starts with 'stats?id=12345...'
+5. Under **Request Headers**, copy the full `Cookie:` value
+6. Paste it into `.env` as `UNTAPPD_COOKIE="…"`
+
+Another option is to run the following script to fetch the needed cookies and add it to your .env file.
+Make sure you add your username to the .env first before running  it.
+
+While being logged into Untappd in a local browser, try:
 
 ```bash
 npm run cookie
@@ -51,15 +64,6 @@ Notes:
 - The helper needs a modern Node.js version with built-in SQLite support.
 - Firefox is the most portable option because its cookies are stored in a readable SQLite database.
 - Chrome, Edge, Brave, Chromium, and Arc encrypt cookies with OS-protected keys. The helper handles common macOS, Linux, and Windows formats, but newer Windows Chrome-family profiles may use App-Bound Encryption that blocks external cookie export. If that happens, use Firefox or copy the cookie manually.
-
-Manual fallback:
-
-1. Log into [untappd.com](https://untappd.com) in your browser
-2. Open DevTools → **Network** tab
-3. Reload the page
-4. Click any request to `untappd.com`
-5. Under **Request Headers**, copy the full `Cookie:` value
-6. Paste it into `.env` as `UNTAPPD_COOKIE="…"`
 
 ## Usage
 
