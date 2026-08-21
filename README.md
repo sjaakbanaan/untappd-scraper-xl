@@ -28,6 +28,7 @@ Edit `.env` and fill in your Untappd credentials:
 ### Getting your session cookies
 
 Check out this video to see how to fetch your your cookies:
+
 https://github.com/user-attachments/assets/46701bff-762f-408a-9e40-439aa769cc54
 
 1. Log into [untappd.com](https://untappd.com) in your browser
