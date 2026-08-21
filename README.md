@@ -1,4 +1,4 @@
-# Untappd Scraper XL v0.9.5
+# Untappd Scraper XL v0.9.6
 
 Scrape **all** your Untappd checkins into a rich, structured JSON file, so you can import it into tools like [Untappd Data Visualised](https://github.com/sjaakbanaan/untappd-data-visualised). 
 
@@ -19,11 +19,11 @@ cp .env.example .env
 
 Edit `.env` and fill in your Untappd credentials:
 
-| Variable | Description |
-|---|---|
-| `UNTAPPD_COOKIE` | Your session cookie (see below) |
-| `UNTAPPD_USER` | Your Untappd username (only works with the cookie from the same user) |
-| `MAPBOX_KEY` | *(Optional)* Your [Mapbox Access Token](https://account.mapbox.com/) for geocoding |
+| Variable         | Description                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `UNTAPPD_COOKIE` | Your session cookie (see below)                                                    |
+| `UNTAPPD_USER`   | Your Untappd username (only works with the cookie from the same user)              |
+| `MAPBOX_KEY`     | *(Optional)* Your [Mapbox Access Token](https://account.mapbox.com/) for geocoding |
 
 ### Getting your session cookie
 
@@ -83,12 +83,12 @@ Scrapes the feed from the top and **stops as soon as it hits a checkin already i
 
 ### All commands
 
-| Script | Flag | What it does |
-|---|---|---|
-| `npm run cookie` | *(none)* | **Cookie helper** — fetch the current Untappd cookie from your browser and write it to `.env` |
-| `npm run scrape` | *(default)* | **Incremental** — fetch only new checkins, stop at first known one, merge into existing output |
-| `npm run scrape:full` | `--full` | **Full scrape** — paginate the entire feed newest → oldest |
-| `npm run scrape:stats` | `--stats` | **Stats refresh** — re-scrape live beer stats, toasts & comments for every existing checkin |
+| Script                 | Flag        | What it does                                                                                   |
+| ---------------------- | ----------- | ---------------------------------------------------------------------------------------------- |
+| `npm run cookie`       | *(none)*    | **Cookie helper** — fetch the current Untappd cookie from your browser and write it to `.env`  |
+| `npm run scrape`       | *(default)* | **Incremental** — fetch only new checkins, stop at first known one, merge into existing output |
+| `npm run scrape:full`  | `--full`    | **Full scrape** — paginate the entire feed newest → oldest                                     |
+| `npm run scrape:stats` | `--stats`   | **Stats refresh** — re-scrape live beer stats, toasts & comments for every existing checkin    |
 
 ```bash
 # Optional: also scrape per-checkin flavor profiles (scrape and scrape:full only)
@@ -113,10 +113,10 @@ Paginates the entire feed in batches, running phases 2–3 (and optionally 4) af
 
 Loads the existing output file and re-scrapes only the fields that change over time, without touching the rest of your data:
 
-| Sub-phase | Pages fetched | Fields refreshed |
-|---|---|---|
-| **A — Beer stats** | Beer pages (unique per beer) | `global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins` |
-| **B — Checkin activity** | Individual checkin pages (one per checkin) | `toasts` (count + users), `comment_count` |
+| Sub-phase                | Pages fetched                              | Fields refreshed                                                                             |
+| ------------------------ | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| **A — Beer stats**       | Beer pages (unique per beer)               | `global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins` |
+| **B — Checkin activity** | Individual checkin pages (one per checkin) | `toasts` (count + users), `comment_count`                                                    |
 
 
 ## Output
@@ -198,12 +198,12 @@ The main output file — fully enriched, sorted newest-first (some values left b
 
 Each entity is stored as a separate JSON file, keyed by its Untappd ID or slug:
 
-| Directory | Key | Contains |
-|---|---|---|
-| `db/beers/<id>.json` | numeric beer ID | `beer_url`, rating, ABV, IBU, style, description, stats |
-| `db/locations/<id>.json` | numeric venue ID | `venue_url`, address, lat/lng |
-| `db/breweries/<slug>.json` | URL-derived slug | `brewery_url`, address, lat/lng (resolved via embedded venue page) |
-| `db/checkins/<id>.json` | numeric checkin ID | `flavor` array (only written with `--include-flavors`) |
+| Directory                  | Key                | Contains                                                           |
+| -------------------------- | ------------------ | ------------------------------------------------------------------ |
+| `db/beers/<id>.json`       | numeric beer ID    | `beer_url`, rating, ABV, IBU, style, description, stats            |
+| `db/locations/<id>.json`   | numeric venue ID   | `venue_url`, address, lat/lng                                      |
+| `db/breweries/<slug>.json` | URL-derived slug   | `brewery_url`, address, lat/lng (resolved via embedded venue page) |
+| `db/checkins/<id>.json`    | numeric checkin ID | `flavor` array (only written with `--include-flavors`)             |
 
 Storing the permalink in each file means live stats (`global_rating`, `global_rating_count`, `total_checkins`, `unique_users`, `monthly_checkins`) can be refreshed with `npm run scrape:stats`.
 
