@@ -156,7 +156,7 @@ https://github.com/user-attachments/assets/46701bff-762f-408a-9e40-439aa769cc54
 
 Then go to [step 7](#7-run-your-first-scrape).
 
-The cookie expires. If a later scrape says the session expired, log into Untappd in your browser again and repeat these steps.
+The cookie expires. If a later scrape says the session expired, or keeps printing `Empty page, retrying…`, log into Untappd in your browser again and repeat these steps (or re-run `npm run cookie`).
 
 ### Option B — Let the script copy it
 
@@ -281,6 +281,7 @@ Loads the existing output file and re-scrapes only the fields that change over t
 | `Set UNTAPPD_COOKIE in your .env file first`            | `.env` is missing, or the cookie line is still the placeholder            | Create `.env` from `.env.example` and complete [step 6](#6-get-your-untappd-cookie)                    |
 | `No Untappd cookies found`                              | You are not logged in, or the helper cannot read that browser             | Log into untappd.com, then copy the cookie from DevTools (option A). Or retry with `--browser firefox` |
 | `Session expired`                                       | The cookie went stale                                                     | Log into Untappd in your browser, then paste a fresh cookie (or re-run `npm run cookie`)               |
+| `Empty page, retrying…`                                 | The cookie is stale or incomplete, so later feed pages come back empty    | Log into Untappd in your browser, then repeat [step 6](#6-get-your-untappd-cookie)                     |
 | Lots of failed requests / throttling                    | Too many parallel requests                                                | Leave it as-is first; if it keeps failing, lower `CONCURRENCY` in `lib/config.mjs` (see Notes)         |
 | Cookie helper errors about SQLite                       | Node is too old                                                           | Upgrade to Node.js 22 or newer                                                                         |
 
@@ -383,7 +384,7 @@ Storing the permalink in each file means live stats (`global_rating`, `global_ra
 
 - **Concurrency**: defaults to 4 parallel workers (set `CONCURRENCY` in `lib/config.mjs`). Raise to 6–8 for faster runs; lower if you see errors
 - **Rate limiting**: 1 s delay per worker between requests
-- **Cookie expiry**: if you see a "Session expired" error, grab a fresh cookie from your browser
+- **Cookie expiry**: if you see a "Session expired" error, or `Empty page, retrying…`, grab a fresh cookie from your browser (repeat [step 6](#6-get-your-untappd-cookie))
 - **Flavor profiles**: opt-in via `--include-flavors`; results are cached in `output/db/checkins/` so only new checkins need fetching on subsequent runs
 - **scrape:stats**: opt-in via `--stats`; re-scrapes beer stats and checkin activity (toasts, comments) for every entry in the existing output file without touching the rest of your data
 - **Mapbox key**: if no `MAPBOX_KEY` is provided, the scraper will still run, but it will not enrich location data (reverse-geocoding for clean names or forward-geocoding for missing coordinates). The JSON will use raw Untappd data instead
