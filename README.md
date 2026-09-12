@@ -1,4 +1,4 @@
-# Untappd Scraper XL v0.9.6
+# Untappd Scraper XL v0.9.7
 
 Scrape **all** your Untappd checkins into a rich, structured JSON file, so you can import it into tools like [Untappd Data Visualised](https://github.com/sjaakbanaan/untappd-data-visualised).
 

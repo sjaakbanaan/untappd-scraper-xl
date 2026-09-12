@@ -234,7 +234,9 @@ function listChromiumProfiles(browser, wantedProfile) {
         }));
     });
 
-  return candidates.sort((a, b) => profileSortScore(a.name) - profileSortScore(b.name));
+  return candidates.sort(
+    (a, b) => profileSortScore(a.name) - profileSortScore(b.name)
+  );
 }
 
 function profileSortScore(profileName) {
@@ -274,7 +276,13 @@ function getLinuxSafeStoragePassword(browser) {
   const applications = browser.linuxSecretApplications ?? [browser.id];
   const candidates = applications.flatMap((application) => [
     ['lookup', 'application', application],
-    ['lookup', 'xdg:schema', 'chrome_libsecret_os_crypt_password', 'application', application],
+    [
+      'lookup',
+      'xdg:schema',
+      'chrome_libsecret_os_crypt_password',
+      'application',
+      application,
+    ],
   ]);
 
   for (const args of candidates) {
@@ -336,18 +344,29 @@ function decryptChromiumCookie(row, browser, profile) {
     if (prefix === 'v10' || prefix === 'v11') {
       const key = getChromiumLocalStateKey(profile.localStatePath);
       if (!key) {
-        throw new Error('Could not find a Chromium Local State encryption key.');
+        throw new Error(
+          'Could not find a Chromium Local State encryption key.'
+        );
       }
-      return cleanDecryptedCookie(row.host_key, decryptAesGcm(encryptedValue, key));
+      return cleanDecryptedCookie(
+        row.host_key,
+        decryptAesGcm(encryptedValue, key)
+      );
     }
 
-    return cleanDecryptedCookie(row.host_key, decryptWindowsDpapi(encryptedValue));
+    return cleanDecryptedCookie(
+      row.host_key,
+      decryptWindowsDpapi(encryptedValue)
+    );
   }
 
   const cbcPassword = getChromiumAesCbcPassword(browser);
   if (!cbcPassword) return '';
 
-  return cleanDecryptedCookie(row.host_key, decryptChromiumAesCbc(encryptedValue, cbcPassword));
+  return cleanDecryptedCookie(
+    row.host_key,
+    decryptChromiumAesCbc(encryptedValue, cbcPassword)
+  );
 }
 
 function decryptAesGcm(encryptedValue, key) {
@@ -369,7 +388,13 @@ function decryptWindowsDpapi(protectedBytes) {
     [Convert]::ToBase64String($plain);
   `;
   const executable = process.env.SystemRoot
-    ? path.join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+    ? path.join(
+        process.env.SystemRoot,
+        'System32',
+        'WindowsPowerShell',
+        'v1.0',
+        'powershell.exe'
+      )
     : 'powershell.exe';
   const output = execFileSync(
     executable,
@@ -384,7 +409,9 @@ function decryptWindowsDpapi(protectedBytes) {
 }
 
 function decryptChromiumAesCbc(encryptedValue, safeStoragePassword) {
-  const encryptedPayload = /^v\d\d/.test(encryptedValue.subarray(0, 3).toString())
+  const encryptedPayload = /^v\d\d/.test(
+    encryptedValue.subarray(0, 3).toString()
+  )
     ? encryptedValue.subarray(3)
     : encryptedValue;
 
@@ -493,10 +520,10 @@ function cookieHeaderFromCookies(cookies) {
     if (!cookiesByName.has(cookie.name)) cookiesByName.set(cookie.name, cookie);
   }
 
-  if (!REQUIRED_COOKIE_NAMES.every((name) => cookiesByName.has(name))) return '';
+  if (!REQUIRED_COOKIE_NAMES.every((name) => cookiesByName.has(name)))
+    return '';
 
-  return REQUIRED_COOKIE_NAMES
-    .map((name) => cookiesByName.get(name))
+  return REQUIRED_COOKIE_NAMES.map((name) => cookiesByName.get(name))
     .filter(Boolean)
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join('; ');
@@ -512,7 +539,9 @@ function findUntappdCookieHeader(options) {
         );
 
   if (browsers.length === 0) {
-    throw new Error(`Unknown browser "${options.browser}". Use --help for choices.`);
+    throw new Error(
+      `Unknown browser "${options.browser}". Use --help for choices.`
+    );
   }
 
   const attempts = [];
@@ -550,7 +579,9 @@ function findUntappdCookieHeader(options) {
     }
   }
 
-  const searched = attempts.length ? attempts.join(', ') : 'no browser profiles found';
+  const searched = attempts.length
+    ? attempts.join(', ')
+    : 'no browser profiles found';
   throw new Error(
     `No Untappd cookies found. Searched: ${searched}. Make sure you are logged in on untappd.com.`
   );
