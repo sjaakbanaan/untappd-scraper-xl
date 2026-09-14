@@ -26,12 +26,12 @@ const DELAY_MS = 200; // Mapbox allows higher concurrency, but let's be polite
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  console.log(`\n📂  Loading ${filePath}…`);
+  console.log(`\n📂 Loading ${filePath}…`);
   let data;
   try {
     data = JSON.parse(readFileSync(filePath, 'utf-8'));
   } catch {
-    console.error(`❌  Cannot read ${filePath}`);
+    console.error(`❌ Cannot read ${filePath}`);
     process.exit(1);
   }
 
@@ -91,7 +91,7 @@ async function main() {
     if (cleanupCount > 0) {
       save(data, filePath);
     } else {
-      console.log(`✅  No new locations found that need coordinate fixes.`);
+      console.log(`✅ No new locations found that need coordinate fixes.`);
     }
     return;
   }
@@ -156,7 +156,7 @@ function save(data, path) {
   });
 
   writeFileSync(path, json);
-  console.log(`💾  Saved updated checkins → ${path}`);
+  console.log(`💾 Saved updated checkins → ${path}`);
 }
 
 main();

@@ -14,7 +14,7 @@ import { OUTPUT_FILE, BEERS_DIR } from './lib/config.mjs';
 import { extractBeerId, hasBeer, writeBeer } from './lib/db.mjs';
 
 if (!existsSync(OUTPUT_FILE)) {
-  console.error(`❌  Output file not found: ${OUTPUT_FILE}`);
+  console.error(`❌ Output file not found: ${OUTPUT_FILE}`);
   process.exit(1);
 }
 
@@ -52,7 +52,7 @@ for (const c of checkins) {
 }
 
 process.stdout.write('\n');
-console.log(`\n✅  Done!`);
+console.log(`\n✅ Done!`);
 console.log(`   Seeded : ${seeded}`);
 console.log(`   Already cached: ${skipped}`);
 console.log(`   No beer URL: ${noData}`);
